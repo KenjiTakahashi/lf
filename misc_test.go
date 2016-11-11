@@ -1,7 +1,9 @@
 package main
 
 import (
+	"math/rand"
 	"reflect"
+	"strconv"
 	"testing"
 )
 
@@ -186,4 +188,74 @@ func TestNaturalLess(t *testing.T) {
 			t.Errorf("at input '%#q','%#q' expected '%v' got '%v'", v.s1, v.s2, v.less, res)
 		}
 	}
+}
+
+func BenchmarkExtractNums(b *testing.B) {
+	set := testSet(300)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for j := range set[0] {
+			_, _, _ = extractNums(set[0][j])
+		}
+	}
+}
+
+func BenchmarkNaturalLess(b *testing.B) {
+	set := testSet(300)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for j := range set[0] {
+			k := (j + 1) % len(set[0])
+			_ = naturalLess(set[0][j], set[0][k])
+		}
+	}
+}
+
+// Get 1000 arrays of 10000-string-arrays.
+func testSet(seed int) [][]string {
+	gen := &generator{
+		src: rand.New(rand.NewSource(
+			int64(seed),
+		)),
+	}
+	set := make([][]string, 1000)
+	for i := range set {
+		strings := make([]string, 10000)
+		for idx := range strings {
+			// random length
+			strings[idx] = gen.NextString()
+		}
+		set[i] = strings
+	}
+	return set
+}
+
+type generator struct {
+	src *rand.Rand
+}
+
+func (g *generator) NextInt(max int) int {
+	return g.src.Intn(max)
+}
+
+// Gets random random-length alphanumeric string.
+func (g *generator) NextString() (str string) {
+	// random-length 3-8 chars part
+	strlen := g.src.Intn(6) + 3
+	// random-length 1-3 num
+	numlen := g.src.Intn(3) + 1
+	// random position for num in string
+	numpos := g.src.Intn(strlen + 1)
+	var num string
+	for i := 0; i < numlen; i++ {
+		num += strconv.Itoa(g.src.Intn(10))
+	}
+	for i := 0; i < strlen+1; i++ {
+		if i == numpos {
+			str += num
+		} else {
+			str += string('a' + g.src.Intn(16))
+		}
+	}
+	return str
 }
